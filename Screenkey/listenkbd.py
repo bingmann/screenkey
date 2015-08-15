@@ -27,9 +27,11 @@ MODE_NORMAL = 1
 
 REPLACE_KEYS = {
     'XK_Escape': _('Esc'),
-    'XK_Tab': u'\u21B9',
+    #'XK_Tab': u'\u21B9',
+    'XK_Tab':u'TAB',
     'XK_Return': u'\u23CE',
-    'XK_Space': u'',
+    #'XK_Space': u'',
+    'XK_Space':u' SPC',
     'XK_Caps_Lock': _('Caps'),
     'XK_F1': u'F1',
     'XK_F2': u'F2',
@@ -191,7 +193,7 @@ class ListenKbd(threading.Thread):
         key = []
         while len(data):
             event, data = rq.EventField(None).parse_binary_value(
-                data, self.record_dpy.display, None, None)
+                data,self.record_dpy.display, None, None)
             if event.type in [X.KeyPress, X.KeyRelease]:
                 if self.mode == MODE_NORMAL:
                     key.append(self.key_normal_mode(event))
@@ -244,11 +246,11 @@ class ListenKbd(threading.Thread):
             if event.type == X.KeyPress:
                 key = key_normal
                 if self.cmd_keys['ctrl']:
-                    mod = mod + _("Ctrl+")
+                    mod = mod + _("C-")
                 if self.cmd_keys['alt']:
-                    mod = mod + _("Alt+")
+                    mod = mod + _("M-")
                 if self.cmd_keys['super']:
-                    mod = mod + _("Super+")
+                    mod = mod + _("s-")
 
                 if self.cmd_keys['shift']:
                     if (key_shift == key_normal or key_normal == u'\x00'

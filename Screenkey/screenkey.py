@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 # Copyright (c) 2010 Pablo Seminario <pabluk@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +23,7 @@ import gobject
 import glib
 import pango
 import pickle
+import keybinder
 from threading import Timer
 
 from Screenkey import APP_NAME, APP_DESC, APP_URL, VERSION, AUTHOR
@@ -61,6 +64,8 @@ class Screenkey(gtk.Window):
     STATE_FILE = os.path.join(glib.get_user_cache_dir(),
                               'screenkey.dat')
 
+    _disabled = False
+
     def __init__(self, logger, nodetach, nohide, bg, fg, nosudo, window_id):
         gtk.Window.__init__(self)
         self.timer = None
@@ -73,6 +78,7 @@ class Screenkey(gtk.Window):
                 'position': POS_BOTTOM,
                 'size': SIZE_SMALL,
                 'mode': MODE_NORMAL,
+                'hotkey': '<Ctrl>F1',
                 }
 
         if not nodetach:
@@ -107,6 +113,7 @@ class Screenkey(gtk.Window):
 
         self.screen_width = gtk.gdk.screen_width()
         self.screen_height = gtk.gdk.screen_height()
+        self.set_window_size(self.options['size'])
 
         self.set_gravity(gtk.gdk.GRAVITY_CENTER)
 
@@ -294,17 +301,22 @@ class Screenkey(gtk.Window):
                            3, timestamp, widget)
 
     def on_label_change(self, widget, data=None):
-        if not self.get_property('visible'):
+        if not self._disabled:
+            if not self.get_property('visible'):
+                gtk.gdk.threads_enter()
+                self.set_xy_position(self.options['position'])
+                self.stick()
+                self.show()
+                gtk.gdk.threads_leave()
+            if self.timer:
+                self.timer.cancel()
+            self.timer = Timer(self.options['timeout'], self.on_timeout)
+            self.timer.start()
+        else:
             gtk.gdk.threads_enter()
-            self.set_xy_position(self.options['position'])
-            self.stick()
-            self.show()
+            self.hide()
+            self.label.set_text("")
             gtk.gdk.threads_leave()
-        if self.timer:
-            self.timer.cancel()
-
-        self.timer = Timer(self.options['timeout'], self.on_timeout)
-        self.timer.start()
 
     def on_timeout(self):
         gtk.gdk.threads_enter()
@@ -321,6 +333,7 @@ class Screenkey(gtk.Window):
 
     def on_show_keys(self, widget, data=None):
         if widget.get_active():
+            self._disabled = False
             self.logger.debug("Screenkey enabled.")
             self.listenkbd = ListenKbd(self.label, logger=self.logger,
                                        mode=self.options['mode'],
@@ -328,6 +341,7 @@ class Screenkey(gtk.Window):
             self.listenkbd.start()
         else:
             self.logger.debug("Screenkey disabled.")
+            self._disabled = True
             self.listenkbd.stop()
 
     def on_configure(self, _, event):
@@ -382,6 +396,10 @@ class Screenkey(gtk.Window):
             if index >= 0:
                 self.options[name] = index
                 self.logger.debug("Window position changed.")
+
+        def on_entry_hotkey_changed(widget, data=None):
+            self.options['hotkey'] = widget.get_text()
+            self.logger.debug("Hotkey value Changed")
 
         frm_main = gtk.Frame(_("Preferences"))
         frm_main.set_border_width(6)
@@ -468,9 +486,27 @@ class Screenkey(gtk.Window):
                             fill=False, padding=4)
         frm_kbd.add(hbox_kbd)
 
+        frm_hotkey = gtk.Frame(_("<b>Hot Keys</b>"))
+        frm_hotkey.set_border_width(4)
+        frm_hotkey.get_label_widget().set_use_markup(True)
+        frm_hotkey.set_shadow_type(gtk.SHADOW_NONE)
+        hbox_hotkey = gtk.HBox()
+        lbl_hotkey = gtk.Label(_("Shortcut"))
+        entry_hotkey = gtk.Entry()
+        entry_hotkey.set_text(self.options['hotkey'])
+        entry_hotkey.set_width_chars(10)
+        entry_hotkey.connect("changed", on_entry_hotkey_changed)
+        hbox_hotkey.pack_start(lbl_hotkey, expand=False,
+                            fill=False, padding=6)
+        hbox_hotkey.pack_start(entry_hotkey, expand=False,
+                            fill=False, padding=4)
+        frm_hotkey.add(hbox_hotkey)
+
+
         vbox_main.pack_start(frm_time, False, False, 6)
         vbox_main.pack_start(frm_aspect, False, False, 6)
         vbox_main.pack_start(frm_kbd, False, False, 6)
+        vbox_main.pack_start(frm_hotkey, False, False, 6)
         frm_main.add(vbox_main)
 
         prefs.vbox.pack_start(frm_main)
