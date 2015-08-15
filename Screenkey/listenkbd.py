@@ -137,7 +137,7 @@ class ListenKbd(threading.Thread):
         return ""
 
     def replace_xk_key(self, key, keysym):
-        print(key, keysym)
+        #print(key, keysym)
         if key == u'\x00' or key == '\x00':
             return ''
         for name in dir(XK):
