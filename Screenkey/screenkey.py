@@ -96,6 +96,7 @@ class Screenkey(gtk.Window):
         bgcolor = gtk.gdk.color_parse(bg)
         self.modify_bg(gtk.STATE_NORMAL, bgcolor)
         self.set_opacity(0.7)
+        self.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_DIALOG)
 
         self.fg = fg
 
